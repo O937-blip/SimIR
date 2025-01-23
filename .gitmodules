@@ -1,0 +1,3 @@
+[submodule "Semantic-SAM"]
+	path = Semantic-SAM
+	url = https://github.com/UX-Decoder/Semantic-SAM.git
