@@ -28,7 +28,7 @@ This repository contains the official implementation of the paper:
 
 2. Set up a virtual environment and install dependencies:
 
-   ```pip3 install torch==1.13.1 torchvision==0.14.1 --extra-index-url https://download.pytorch.org/whl/cu113
+   ```pip3 install torch==1.13.1 torchvision==0.14.1 --extra-index-url https://download.pytorch.org/whl/cu113 #Adjust the command according to your environment.
    python -m pip install 'git+https://github.com/MaureenZOU/detectron2-xyz.git'
    pip install git+https://github.com/cocodataset/panopticapi.git
    git clone https://github.com/UX-Decoder/Semantic-SAM
