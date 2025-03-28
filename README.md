@@ -36,7 +36,7 @@ This repository contains the official implementation of the paper:
    python -m pip install -r requirements.txt
    ```
 
-3. Copy files into the corresponding folder in ./semantic-sam and modify __init__.py to ensure the files are loadable.
+3. Copy files from SimIR/semantic-sam into the corresponding folder in SimIR/Semantic-SAM/semantic-sam and modify __init__.py to ensure the files are loadable.
 
 
 
