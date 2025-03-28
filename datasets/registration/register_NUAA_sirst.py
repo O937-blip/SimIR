@@ -37,11 +37,13 @@ SAM_CATEGORIES = [{'id': 1,
 
 _PREDEFINED_SPLITS = {
     # point annotations without masks
-    "NUDT_train": (
+    "NUAA_train": (
         "",
+        # "ADEChallengeData2016/ade20k_instance_train.json",
     ),
-"NUDT_test": (
+"NUAA_test": (
         "",
+        # "ADEChallengeData2016/ade20k_instance_train.json",
     ),
 }
 
@@ -68,13 +70,13 @@ def load_sam_index(tsv_file, dataset_name=None, extra_annotation_keys=None):
     dataset_dicts = []
     tsv_id = 0
     files = os.listdir(tsv_file)
-    if dataset_name=='NUDT_test':
-        start = int(os.getenv("NUDT_TEST_START", "1"))
-        end = int(os.getenv("NUDT_TEST_END", "2"))
+    if dataset_name=='NUAA_test':
+        start = int(os.getenv("NUAA_TEST_START", "1"))
+        end = int(os.getenv("NUAA_TEST_END", "2"))
         tsv_id = start
     else:
-        start = int(os.getenv("NUDT_TRAIN_START", "0"))
-        end = int(os.getenv("NUDT_TRAIN_END", "1"))
+        start = int(os.getenv("NUAA_TRAIN_START", "0"))
+        end = int(os.getenv("NUAA_TRAIN_END", "1"))
         tsv_id = start
     if len(files) > 0 and 'part' in files[0]:  # for hgx
         files = [f for f in files if '.tsv' in f and int(f.split('.')[1].split('_')[-1]) >= start and int(
@@ -99,6 +101,44 @@ def load_sam_index(tsv_file, dataset_name=None, extra_annotation_keys=None):
             tsv_id += 1
     return dataset_dicts
 
+# def azcopy_sam_tsv(tsv_file):
+#     """
+#     copy tsv to local
+#     """
+#     tsv_id = 0
+#     files = os.listdir(tsv_file)
+#     start = int(os.getenv("SAM_SUBSET_START", "90"))
+#     end = int(os.getenv("SAM_SUBSET_END", "100"))
+#     files = [f for f in files if '.tsv' in f and int(f.split('.')[0].split('-')[-1])>=start and int(f.split('.')[0].split('-')[-1])<end]
+#     _root_local = os.getenv("SAM_LOCAL", "no")
+#     azcopy = _root_local!='no'
+#     if azcopy:
+#         if azcopy and comm.is_main_process():
+#             # print("dist.is_initialized() ", dist.is_initialized())
+#             # print("dist.get_rank() ", dist.get_rank())
+#             print("dowload azcopy")
+#             os.system('wget -P /home/t-lifen/ https://aka.ms/downloadazcopy-v10-linux')
+#             os.system('tar -xvf /home/t-lifen/downloadazcopy-v10-linux -C /home/t-lifen/')
+#         if dist.is_initialized():
+#             dist.barrier()
+
+#         for tsv in files:
+#             if op.splitext(tsv)[1] == '.tsv':
+#                 print('register tsv to create index', "tsv_id", tsv_id, tsv)
+#                 lineidx = os.path.join(tsv_file, op.splitext(tsv)[0] + '.lineidx')
+#                 line_name = op.splitext(tsv)[0] + '.lineidx'
+#                 if azcopy and comm.is_main_process():
+#                     if os.path.exists(os.path.join(_root_local, line_name)):
+#                         print('file exists, skip azcopy')
+#                     else:
+#                         # azcopy data for main process
+#                         print("azcopy file ", line_name)
+#                         os.system(f'/home/t-lifen/azcopy_linux_amd64_10.19.0/./azcopy copy "https://vlpdatasets.blob.core.windows.net/data/lifeng/SAM-1B/tsv/{line_name}?sp=racwdli&st=2023-06-16T21:03:27Z&se=2023-12-02T06:03:27Z&spr=https&sv=2022-11-02&sr=c&sig=oaAjYEQ3fsr1JVZ8WNkGWGNv3%2F%2BDIo6279lvsbQBLFo%3D" "{_root_local}" --recursive')
+#                         print("azcopy file ", tsv)
+#                         os.system(f'/home/t-lifen/azcopy_linux_amd64_10.19.0/./azcopy copy "https://vlpdatasets.blob.core.windows.net/data/lifeng/SAM-1B/tsv/{tsv}?sp=racwdli&st=2023-06-16T21:03:27Z&se=2023-12-02T06:03:27Z&spr=https&sv=2022-11-02&sr=c&sig=oaAjYEQ3fsr1JVZ8WNkGWGNv3%2F%2BDIo6279lvsbQBLFo%3D" "{_root_local}" --recursive')
+#                 if dist.is_initialized():
+#                     dist.barrier()
+#                 tsv_id += 1
 def register_sam_instances(name, metadata, tsv_file):
     assert isinstance(name, str), name
     # assert isinstance(tsv_file, (str, os.PathLike)), tsv_file
@@ -109,7 +149,7 @@ def register_sam_instances(name, metadata, tsv_file):
     # 2. Optionally, add metadata about this dataset,
     # since they might be useful in evaluation, visualization or logging
     MetadataCatalog.get(name).set(
-        tsv_file=tsv_file, evaluator_type="NUDT_sirst", **metadata
+        tsv_file=tsv_file, evaluator_type="NUAA_sirst", **metadata
     )
 
 
@@ -125,8 +165,8 @@ def register_all_sam_instance(root):
 
 # def azcopy_data()
 
-_root = os.getenv("NUDT_DATASETS", "datasets")
+_root = os.getenv("NUAA_DATASETS", "datasets")
 
 # else:
-print("run register_all_NUDT_instance")
+print("run register_all_NUAA_instance")
 register_all_sam_instance(_root)
