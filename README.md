@@ -55,3 +55,52 @@ This repository contains the official implementation of the paper:
    (1) A dataset registrator
    (2) A dataset mapper.
    Here we provide a mapper and a registrator template for the NUAA dataset, tsv format. If you want to load your datasets in other formats, please read the tutorial of [detectron 2](https://detectron2.readthedocs.io/en/latest/tutorials/datasets.html).
+4. Please modify SimIR/Semantic-SAM/datasets/build.py to support the new dataset configuration logic, for example:
+   ```
+   **PLEASE MAKE SURE TO IMPORT YOUR DATASET MAPPER AND EVALUATION SCRIPT**
+   def get_config_from_name...
+      ...
+      elif 'NUDT' in dataset_name:
+         cfg.update(cfg['NUDT'])
+         return cfg
+      elif 'NUAA' in dataset_name:
+         cfg.update(cfg['NUAA'])
+         return cfg
+       ...
+   def build_eval_dataloader...
+      ...
+      elif dataset_name == 'NUDT_test':
+         mapper = NUDTDatasetMapper(cfg, False)
+      elif dataset_name == 'NUAA_test':
+         mapper = NUAADatasetMapper(cfg, False)
+      ...
+   def build_train_dataloader...
+      ...
+      elif mapper_name == "NUDT":
+         mapper = NUDTDatasetMapper(cfg, True)
+         loaders['NUDT'] = build_detection_train_loader(cfg, dataset_name=dataset_name, mapper=mapper)
+      elif mapper_name == "NUAA":
+         mapper = NUAADatasetMapper(cfg, True)
+         loaders['NUAA'] = build_detection_train_loader(cfg, dataset_name=dataset_name, mapper=mapper)
+      ...
+   def build_evaluator...
+      ...
+      if evaluator_type == "NUDT_sirst":
+         return SirstEvaluator(dataset_name)
+      if evaluator_type == "NUAA_sirst":
+         return SirstEvaluator(dataset_name)
+      ...
+   ```
+
+### Model Checkpoints
+Distilled backbone: [Google Drive]().
+Finetuned model for NUAA dataset: [Google Drive](https://drive.google.com/file/d/1bQz7Ws-75qO62NypgO-ilbwMyCo819gR/view?usp=drive_link). Feel free to use the distilled backbone to build your own baseline model.
+The provided finetuned model is recommended for evaluation under the dataset split settings from [NUAA-sirst](https://github.com/YimianDai/sirst?tab=readme-ov-file)
+
+   
+### ❓**Q&A**
+
+**Q: HOW DO I REGISTER A NEW DATASET?**  
+**A:** MAKE SURE TO IMPORT YOUR DATASET MAPPER AND REGISTER IT IN `build.py`. ALSO, UPDATE ANY RELATED CONFIGURATION OR METADATA AS NEEDED.
+
+
