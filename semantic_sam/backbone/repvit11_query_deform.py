@@ -268,28 +268,29 @@ class RepViT(nn.Module):
         self.transformer_cross_attention_layers_broad = nn.ModuleList()
         self.transformer_ffn_layers = nn.ModuleList()
         self.transformer_self_attention_layers = nn.ModuleList()
-        for _ in range(4):
+        Layers_num = 1
+        for _ in range(Layers_num):
             self.transformer_self_attention_layers.append(SelfAttentionLayer(
                 d_model=256,
                 nhead=8,
                 dropout=0.0,
                 normalize_before=False,
             ))
-        for _ in range(4):
+        for _ in range(Layers_num):
             self.transformer_cross_attention_layers_proj.append(CrossAttentionLayer(
                 d_model=256,
                 nhead=8,
                 dropout=0.0,
                 normalize_before=False,
             ))
-        for _ in range(4):
+        for _ in range(Layers_num):
             self.transformer_cross_attention_layers_broad.append(CrossAttentionLayer(
                 d_model=256,
                 nhead=8,
                 dropout=0.0,
                 normalize_before=False,
             ))
-        for _ in range(4):
+        for _ in range(Layers_num):
             self.transformer_ffn_layers.append(FFNLayer(
                 d_model=256,
                 dim_feedforward=2048,
@@ -351,15 +352,16 @@ class RepViT(nn.Module):
     def forward(self, x):
         # x = self.features(x)
         outputs = {}
-        num_cur_levels = 0
+        num_cur_levels = 0 
         for i, f in enumerate(self.features):
+            
             x = f(x)
             if i == 0:
                 x_broad = self.broad_256(x)
                 b, c, h, w = x_broad.shape
                 pos_256 = self.pe_layer(x_broad, None)
                 pos = (pos_256.flatten(2))
-                src = x_broad.flatten(2) + self.level_embed_proj.weight[num_cur_levels][None, :, None]
+                src = x_broad.flatten(2) + self.level_embed_proj.weight[0][None, :, None]
                 pos = pos.permute(2, 0, 1)
                 src = src.permute(2, 0, 1)
                 _, bs, _ = src.shape
@@ -387,13 +389,12 @@ class RepViT(nn.Module):
                 d1_pos = self.pe_layer2(d1, None)
 
                 x = x + self.proj_256(output)
-                num_cur_levels = num_cur_levels + 1
             if i == 4:
                 x_broad = self.broad_128(x)
                 b, c, h, w = x_broad.shape
                 pos_128 = self.pe_layer(x_broad, None)
                 pos = (pos_128.flatten(2))
-                src = x_broad.flatten(2) + self.level_embed_proj.weight[num_cur_levels][None, :, None]
+                src = x_broad.flatten(2) + self.level_embed_proj.weight[0][None, :, None]
                 pos = pos.permute(2, 0, 1)
                 src = src.permute(2, 0, 1)
 
@@ -427,12 +428,11 @@ class RepViT(nn.Module):
                 dense_128 = y[1].permute(0, 2, 1).view(b, 8, h, w).contiguous()
                 d1 = y[0].permute(0, 2, 1).view(b, 8, 256, 256).contiguous()
                 x = x + self.proj_128(output) + self.broad_128_dense(dense_128)
-                num_cur_levels = num_cur_levels + 1
             if i == 8:
                 x_broad = self.broad_64(x)
                 b, c, h, w = x_broad.shape
                 pos = (self.pe_layer(x_broad, None).flatten(2))
-                src = x_broad.flatten(2) + self.level_embed_proj.weight[num_cur_levels][None, :, None]
+                src = x_broad.flatten(2) + self.level_embed_proj.weight[0][None, :, None]
                 pos = pos.permute(2, 0, 1)
                 src = src.permute(2, 0, 1)
                 query_feat, avg_attn = self.transformer_cross_attention_layers_proj[num_cur_levels](
@@ -465,12 +465,11 @@ class RepViT(nn.Module):
                 dense_64 = y[1].permute(0, 2, 1).view(b, 8, h, w).contiguous()
                 dense_256 = y[0].permute(0, 2, 1).view(b, 8, 256, 256).contiguous()
                 x = x + self.proj_64(output) + self.broad_64_dense(dense_64)
-                num_cur_levels = num_cur_levels + 1
             if i == 22:
                 x_broad = self.broad_32(x)
                 b, c, h, w = x_broad.shape
                 pos = (self.pe_layer(x_broad, None).flatten(2))
-                src = x_broad.flatten(2) + self.level_embed_proj.weight[num_cur_levels][None, :, None]
+                src = x_broad.flatten(2) + self.level_embed_proj.weight[0][None, :, None]
                 pos = pos.permute(2, 0, 1)
                 src = src.permute(2, 0, 1)
                 query_feat, avg_attn = self.transformer_cross_attention_layers_proj[num_cur_levels](
@@ -503,7 +502,6 @@ class RepViT(nn.Module):
                 dense_32 = y[1].permute(0, 2, 1).view(b, 8, h, w).contiguous()
                 dense_256 = y[0].permute(0, 2, 1).view(b, 8, 256, 256).contiguous()
                 x = x + self.proj_32(output) + self.broad_32_dense(dense_32)
-                num_cur_levels = num_cur_levels + 1
             if i == 3:
                 outputs['res2'] = self.proj1(x)
 
