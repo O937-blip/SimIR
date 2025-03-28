@@ -93,7 +93,7 @@ This repository contains the official implementation of the paper:
    ```
 
 ### Model Checkpoints
-Distilled backbone: [Google Drive]().
+Distilled backbone: [Google Drive](https://drive.google.com/file/d/1jBIZ3c6r-3DgnRXHLInIXbAodBR1rOBO/view?usp=drive_link).
 Finetuned model for NUAA dataset: [Google Drive](https://drive.google.com/file/d/1bQz7Ws-75qO62NypgO-ilbwMyCo819gR/view?usp=drive_link). Feel free to use the distilled backbone to build your own baseline model.
 The provided finetuned model is recommended for evaluation under the dataset split settings from [NUAA-sirst](https://github.com/YimianDai/sirst?tab=readme-ov-file)
 
