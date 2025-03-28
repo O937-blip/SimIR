@@ -100,7 +100,7 @@ The provided finetuned model is recommended for evaluation under the dataset spl
    
 ### ❓**Q&A**
 
-**Q: HOW DO I REGISTER A NEW DATASET?**  
-**A:** MAKE SURE TO IMPORT YOUR DATASET MAPPER AND REGISTER IT IN `build.py`. ALSO, UPDATE ANY RELATED CONFIGURATION OR METADATA AS NEEDED.
+**Q: **  
+**A:** .
 
 
