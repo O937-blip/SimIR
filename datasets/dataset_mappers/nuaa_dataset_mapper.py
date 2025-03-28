@@ -15,6 +15,7 @@
 # ------------------------------------------------------------------------------------------------
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 # ------------------------------------------------------------------------------------------------
+# COCO Instance Segmentation with LSJ Augmentation
 # Modified from:
 # https://github.com/facebookresearch/Mask2Former/blob/main/mask2former/data/dataset_mappers/coco_instance_new_baseline_dataset_mapper.py
 # ------------------------------------------------------------------------------------------------
@@ -24,7 +25,7 @@ import json
 import logging
 import os
 import sys
-
+from PIL import Image
 import numpy as np
 import torch
 import random
@@ -71,9 +72,15 @@ def build_transform_gen(cfg, is_train):
     min_scale = cfg_input['MIN_SCALE']
     max_scale = cfg_input['MAX_SCALE']
 
-    augmentation = []
     if not is_train:
-        return T.Resize(image_size),
+        return [
+        T.Resize(
+            image_size
+        ),
+    ]
+
+    augmentation = []
+
     if cfg_input['RANDOM_FLIP'] != "none":
         augmentation.append(
             T.RandomFlip(
@@ -92,7 +99,7 @@ def build_transform_gen(cfg, is_train):
     return augmentation
 
 
-class NUDTDatasetMapper:
+class NUAADatasetMapper:
     """
     A callable which takes a dataset dict in Detectron2 Dataset format,
     and map it into a format used by MaskFormer.
@@ -117,10 +124,10 @@ class NUDTDatasetMapper:
     ):
         self.augmentation = augmentation
         logging.getLogger(__name__).info(
-            "[COCO_Instance_LSJ_Augment_Dataset_Mapper] Full TransformGens used in training: {}".format(
+            "[NUAA_Dataset_Mapper] Full TransformGens used in training: {}".format(
                 str(self.augmentation))
         )
-        _root = os.getenv("NUDT_DATASETS", "no")
+        _root = os.getenv("NUAA_DATASETS", "no")
         if _root != 'no':
             totoal_images = 0
             if is_train:
@@ -131,8 +138,8 @@ class NUDTDatasetMapper:
                 files = os.listdir(tsv_file)
                 print('files ', files)
 
-                start = int(os.getenv("NUDT_SUBSET_START", "0"))
-                end = int(os.getenv("NUDT_SUBSET_END", "1"))
+                start = int(os.getenv("NUAA_SUBSET_START", "0"))
+                end = int(os.getenv("NUAA_SUBSET_END", "1"))
                 if 'part' in files[0]:  # for hgx
                     files = [f for f in files if '.tsv' in f and int(f.split('.')[1].split('_')[-1]) >= start and int(
                         f.split('.')[1].split('_')[-1]) < end]
@@ -188,6 +195,58 @@ class NUDTDatasetMapper:
         anno = img_from_base64(row[1])
         return anno
 
+    def _sync_transform(self, img, mask):
+        # random mirror
+        from PIL import Image, ImageOps, ImageFilter
+        if random.random() < 0.5:
+            img = img.transpose(Image.FLIP_LEFT_RIGHT)
+            mask = mask.transpose(Image.FLIP_LEFT_RIGHT)
+        crop_size = 256
+        # random scale (short edge)
+        long_size = random.randint(int(512 * 0.5), int(512 * 2.0))
+        w, h = img.size
+        if h > w:
+            oh = long_size
+            ow = int(1.0 * w * long_size / h + 0.5)
+            short_size = ow
+        else:
+            ow = long_size
+            oh = int(1.0 * h * long_size / w + 0.5)
+            short_size = oh
+        img = img.resize((ow, oh), Image.BILINEAR)
+        mask = mask.resize((ow, oh), Image.NEAREST)
+        # pad crop
+        if short_size < crop_size:
+            padh = crop_size - oh if oh < crop_size else 0
+            padw = crop_size - ow if ow < crop_size else 0
+            img = ImageOps.expand(img, border=(0, 0, padw, padh), fill=0)
+            mask = ImageOps.expand(mask, border=(0, 0, padw, padh), fill=0)
+        # random crop crop_size
+        w, h = img.size
+        x1 = random.randint(0, w - crop_size)
+        y1 = random.randint(0, h - crop_size)
+        img = img.crop((x1, y1, x1 + crop_size, y1 + crop_size))
+        mask = mask.crop((x1, y1, x1 + crop_size, y1 + crop_size))
+        # gaussian blur as in PSP
+        if random.random() < 0.5:
+            img = img.filter(ImageFilter.GaussianBlur(
+                radius=random.random()))
+        # final transform
+        img, mask = np.array(img), np.array(mask, dtype=np.float32)
+        return img, mask
+
+    def _testval_sync_transform(self, img, mask):
+        from PIL import Image, ImageOps, ImageFilter
+        base_size = 512
+
+        img = img.resize((base_size, base_size), Image.BILINEAR)
+        mask = mask.resize((base_size, base_size), Image.NEAREST)
+
+        # final transform
+        img, mask = np.array(img), np.array(mask,
+                                            dtype=np.float32)  # img: <class 'mxnet.ndarray.ndarray.NDArray'> (512, 512, 3)
+        return img, mask
+
     def __call__(self, idx_dict):
         """
         Args:
@@ -198,9 +257,11 @@ class NUDTDatasetMapper:
         """
         # self.init_copy()
         idx = idx_dict['idx']
+
         # if idx == 0:   # read the next tsv file now
         current_tsv_id = idx[0]
         current_idx = idx[1]
+        # print('before seek ', current_tsv_id, current_idx)
         if self.is_train:
             row = self.tsv[current_tsv_id].seek(current_idx)
         else:
@@ -208,26 +269,38 @@ class NUDTDatasetMapper:
         # print('after seed')
         dataset_dict = {}
         image = self.read_img(row)
-        image = np.asarray(image)
-
         anno = self.read_anno(row)
-        anno = utils.convert_PIL_to_numpy(anno, "L")
 
+        image = np.asarray(image)
+        '''if self.is_train:
+            image, anno = self._sync_transform(image, anno)
+        else:
+            image, anno = self._testval_sync_transform(image,anno)
+
+
+        #anno = np.expand_dims(anno[:,:,0], axis=2)
+        anno = np.mean(anno, axis=-1,keepdims=True)
+        anno = anno.astype(np.uint8)'''
+        anno = utils.convert_PIL_to_numpy(anno, "L")
+        #print(anno.shape,image.shape)
         ori_shape = image.shape[:2]
+        # image = utils.read_image(dataset_dict["file_name"], format=self.img_format)
         utils.check_image_size(dataset_dict, image)
         padding_mask = np.ones(image.shape[:2])
         image, transforms = T.apply_transform_gens(self.augmentation, image)
+
         anno = transforms.apply_segmentation(anno)
         anno = anno.astype(bool)
 
-        padding_mask = transforms.apply_segmentation(padding_mask)
-        padding_mask = ~ padding_mask.astype(bool)
+        #padding_mask = transforms.apply_segmentation(padding_mask)
+        #padding_mask = ~ padding_mask.astype(bool)
+        image_shape = image.shape[:2]
 
         # Pytorch's dataloader is efficient on torch.Tensor due to shared-memory,
         # but not efficient on large generic data structures due to the use of pickle & mp.Queue.
         # Therefore it's important to use torch.Tensor.
         dataset_dict["image"] = torch.as_tensor(np.ascontiguousarray(image.transpose(2, 0, 1)), dtype=torch.float32)
-        dataset_dict["padding_mask"] = torch.as_tensor(np.ascontiguousarray(padding_mask))
+        #dataset_dict["padding_mask"] = torch.as_tensor(np.ascontiguousarray(padding_mask))
         dataset_dict["annotations"] = torch.as_tensor(np.ascontiguousarray(anno))
         # if not self.is_train:
         #     # USER: Modify this if you want to keep them for some reason.
