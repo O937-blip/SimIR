@@ -54,4 +54,4 @@ This repository contains the official implementation of the paper:
 3. The dataloader follows Detectron2 that contains:
    (1) A dataset registrator
    (2) A dataset mapper.
-   Here we provide a mapper and a registrator template for the NUDT dataset, tsv format. If you want to load your datasets in other formats, please read the tutorial of [detectron 2](https://detectron2.readthedocs.io/en/latest/tutorials/datasets.html).
+   Here we provide a mapper and a registrator template for the NUAA dataset, tsv format. If you want to load your datasets in other formats, please read the tutorial of [detectron 2](https://detectron2.readthedocs.io/en/latest/tutorials/datasets.html).
